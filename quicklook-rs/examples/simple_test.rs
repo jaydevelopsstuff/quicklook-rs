@@ -9,6 +9,7 @@ fn main() {
 
     let mut panel = QuickLookPanel::shared().unwrap();
 
+    // Add some test file paths that exist on your file system
     panel.set_items(vec![
         PreviewItem::from_file_url("<path-to-your-file-1>", None).unwrap(),
         PreviewItem::from_file_url("<path-to-your-file-2>", None).unwrap(),

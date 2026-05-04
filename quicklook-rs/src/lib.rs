@@ -14,6 +14,13 @@ use objc2_foundation::{NSString, NSURL};
 
 mod raw;
 
+/// The main representation for the QuickLook Preview Panel.
+/// Only one instance per application should be created and used
+/// on the **main thread only**.
+///
+/// # See Also
+/// - [`QuickLookPanel::handle`] for accessing/modifying pane
+/// state from other threads
 pub struct QuickLookPanel {
     panel: Retained<QLPreviewPanel>,
     state: Arc<Mutex<PanelState>>,
@@ -36,6 +43,10 @@ impl QuickLookPanel {
     /// Creates a new instance of the QuickLookPanel which has shared access
     /// to the underlying panel. You should only ever really call this once
     /// for each application that is running.
+    ///
+    /// This will return `None` if called from a thread other than the main
+    /// thread, or if the sharedPreviewPanel instance failed to be
+    /// retrieved/created.
     pub fn shared() -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
 
@@ -82,6 +93,11 @@ impl QuickLookPanel {
         state.dirty = true;
     }
 
+    /// Requests that the preview panel reload its data
+    /// from the data source, if it is marked dirty.
+    ///
+    /// This must be manually called on the main thread after
+    /// any changes are made to the preview items.
     pub fn reload_if_dirty(&self) {
         let mut state = self.state.lock().unwrap();
 
@@ -93,6 +109,8 @@ impl QuickLookPanel {
         }
     }
 
+    /// Requests that the preview panel recompute the preview
+    /// of the current preview item.
     pub fn refresh_current_preview_item(&self) {
         unsafe {
             self.panel.refreshCurrentPreviewItem();
@@ -144,6 +162,10 @@ pub struct PanelState {
     dirty: bool,
 }
 
+/// An item that can be shown in the preview pane.
+///
+/// If no `src_frame` is specified, the preview pane will use a
+/// fade in/out animation rather than a zoom in/out animation.
 pub struct PreviewItem {
     source: Retained<NSURL>,
     src_frame: Option<SourceFrame>,
@@ -154,6 +176,9 @@ impl PreviewItem {
         Self { source, src_frame }
     }
 
+    /// Creates a new PreviewItem using the given file path and optional source frame.
+    ///
+    /// This will return `None` if the Path is not valid unicode.
     pub fn from_file_url(path: impl AsRef<Path>, src_frame: Option<SourceFrame>) -> Option<Self> {
         Some(Self::new(
             NSURL::fileURLWithPath(&NSString::from_str(path.as_ref().to_str()?)),
