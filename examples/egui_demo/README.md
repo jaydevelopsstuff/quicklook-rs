@@ -1,4 +1,5 @@
 # egui demo
+
 This is a very simple demo of how quicklook-rs could be used with images.
 
 ### Usage
