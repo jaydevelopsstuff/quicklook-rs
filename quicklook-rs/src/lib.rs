@@ -47,7 +47,7 @@ use std::sync::{Arc, Mutex};
 use objc2::{MainThreadMarker, rc::Retained, runtime::ProtocolObject};
 use objc2_quick_look_ui::QLPreviewPanel;
 
-use crate::raw::{
+use crate::interop::{
     qlpreviewpaneldatasource::QLPreviewPanelDataSource,
     qlpreviewpaneldelegate::QLPreviewPanelDelegate,
 };
@@ -56,7 +56,7 @@ use std::path::Path;
 
 use objc2_foundation::{NSString, NSURL};
 
-mod raw;
+mod interop;
 
 /// The main representation for the QuickLook Preview Panel.
 /// Only one instance per application should be created and used
