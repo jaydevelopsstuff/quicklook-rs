@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "quicklook-rs",
+    "examples/egui_demo"
+]
+
+exclude = [
+    "examples/*"
+]
+resolver = "3"

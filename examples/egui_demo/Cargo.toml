@@ -1,0 +1,15 @@
+[package]
+name = "egui_demo"
+version = "0.1.0"
+edition = "2024"
+
+publish = false
+
+[dependencies]
+quicklook-rs = { path = "../../quicklook-rs" }
+
+egui = "0.34"
+eframe = "0.34"
+egui_extras =  { version = "0.34", features = ["image", "file"] }
+image = { version = "0.25", features = ["png", "jpeg"] }
+rfd = "0.17"
