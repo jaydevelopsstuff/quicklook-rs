@@ -1,3 +1,47 @@
+/*!
+Interact with Apple's [QuickLookUI API](https://developer.apple.com/documentation/quicklookui)
+in Rust without the tedious interop.
+
+## Basic Usage
+In reality most of these methods would likely be called in response to user inputs
+in different part of the application cycle, but this gives a good picture of the API.
+```rust
+use quicklook_rs::{PreviewItem, QuickLookPanel, SourceFrame};
+
+// ...
+// On the main thread and after a running application has been established
+
+let mut panel = QuickLookPanel::shared().unwrap();
+
+// Assigning items
+panel.set_items(vec![
+    // Without a source frame (preview pane will have a fade in/out animation)
+    PreviewItem::from_file_url("/test/example-text.txt", None).unwrap(),
+    // With a source frame (preview pane will have zoom in/out animation based on the frame)
+    PreviewItem::from_file_url("/test/example-img.jpeg", Some(SourceFrame {
+        // Dummy values
+        x: 64.,
+        y: 64.,
+        width: 64.,
+        height: 64.,
+    })).unwrap(),
+    PreviewItem::from_url_string("https://google.com", None).unwrap(),
+]);
+
+// Displaying the panel
+panel.show();
+
+// Adding items on the fly (you could also use set_items)
+panel.push_item(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+
+// Reloading to trigger changes taking effect if the panel is already open
+panel.reload_if_dirty();
+
+// Hiding the panel
+panel.hide();
+```
+*/
+
 use std::sync::{Arc, Mutex};
 
 use objc2::{MainThreadMarker, rc::Retained, runtime::ProtocolObject};
