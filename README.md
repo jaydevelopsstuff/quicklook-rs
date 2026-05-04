@@ -58,7 +58,7 @@ panel.hide();
 For a simple example and testing purposes, you can try out `examples/simple_test` 
 (found within the `quicklook-rs` library folder). Simply modify the file urls in the 
 `set_items` call to your liking and then execute `cargo run --example simple_test`
-(ensure your executing this within the `quicklook-rs` library folder).
+(ensure you're executing this within the `quicklook-rs` library folder).
 
 ### Full Demo
 For more robust demonstration and testing of `quicklook-rs`, you can try out
