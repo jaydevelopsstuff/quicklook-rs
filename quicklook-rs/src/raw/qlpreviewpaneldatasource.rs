@@ -1,10 +1,10 @@
 use std::sync::{Arc, Mutex};
 
-use objc2::rc::{Allocated, Retained};
-use objc2::{AnyThread, DeclaredClass, MainThreadOnly, define_class, msg_send};
+use objc2::rc::Retained;
+use objc2::{AnyThread, DeclaredClass, define_class, msg_send};
 use objc2_app_kit::NSPanel;
-use objc2_foundation::{NSArray, NSObject, NSObjectProtocol};
-use objc2_foundation::{NSMutableArray, NSURL};
+use objc2_foundation::NSURL;
+use objc2_foundation::{NSObject, NSObjectProtocol};
 
 use objc2_quick_look_ui::QLPreviewPanelDataSource as QLPreviewPanelDataSourceProtocol;
 
