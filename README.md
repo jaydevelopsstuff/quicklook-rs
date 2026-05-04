@@ -2,13 +2,14 @@
 
 `quicklook-rs` provides an easy to use Rust wrapper for Apple's 
 [QuickLookUI API](https://developer.apple.com/documentation/quicklookui).
-This is a work in progress and as such not everything may be implemented—feel
-free to open an issue or pr if you'd like!
 
 Unlike the [`objc2-quick-look-ui`](https://crates.io/crates/objc2-quick-look-ui) crate,
 `quicklook-rs` doesn't just provide bindings, but rather makes QuickLookUI accessible in
 idiomatic Rust. This removes the need for manually writing the required delegates and other
 interop between Rust and Apple's Objective-C APIs.
+
+This is a work in progress and as such not everything may be thoroughly implemented—feel
+free to open issues/prs.
 
 ## Examples 
 
