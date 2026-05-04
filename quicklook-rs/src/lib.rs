@@ -44,7 +44,7 @@ impl QuickLookPanel {
     /// to the underlying panel. You should only ever really call this once
     /// for each application that is running.
     ///
-    /// This will return `None` if called from a thread other than the main
+    /// This will return [`None`] if called from a thread other than the main
     /// thread, or if the sharedPreviewPanel instance failed to be
     /// retrieved/created.
     pub fn shared() -> Option<Self> {
@@ -176,12 +176,25 @@ impl PreviewItem {
         Self { source, src_frame }
     }
 
-    /// Creates a new PreviewItem using the given file path and optional source frame.
+    /// Creates a new [`PreviewItem`] using the given file path and optional source frame.
     ///
-    /// This will return `None` if the Path is not valid unicode.
+    /// This will return [`None`] if the path is not valid unicode.
     pub fn from_file_url(path: impl AsRef<Path>, src_frame: Option<SourceFrame>) -> Option<Self> {
         Some(Self::new(
             NSURL::fileURLWithPath(&NSString::from_str(path.as_ref().to_str()?)),
+            src_frame,
+        ))
+    }
+
+    /// Creates a new [`PreviewItem`] using the given URL string and optional source frame.
+    ///
+    /// This will return [`None`] if the URL is malformed.
+    pub fn from_url_string(
+        url_string: impl AsRef<str>,
+        src_frame: Option<SourceFrame>,
+    ) -> Option<Self> {
+        Some(Self::new(
+            NSURL::URLWithString(&NSString::from_str(url_string.as_ref()))?,
             src_frame,
         ))
     }
