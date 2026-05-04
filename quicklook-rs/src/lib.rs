@@ -33,6 +33,9 @@ pub struct QuickLookHandle {
 }
 
 impl QuickLookPanel {
+    /// Creates a new instance of the QuickLookPanel which has shared access
+    /// to the underlying panel. You should only ever really call this once
+    /// for each application that is running.
     pub fn shared() -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
 
@@ -55,6 +58,17 @@ impl QuickLookPanel {
             delegate,
             state: panel_state,
         })
+    }
+
+    /// Appends a new preview item after the last one.
+    ///
+    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after for your changes
+    /// to take visual effect.
+    pub fn push_item(&self, item: PreviewItem) {
+        let mut state = self.state.lock().unwrap();
+
+        state.items.push(item);
+        state.dirty = true;
     }
 
     /// Assigns a new set of preview items to the Preview Panel.
@@ -101,11 +115,22 @@ impl QuickLookPanel {
 }
 
 impl QuickLookHandle {
+    /// Appends a new preview item after the last one.
+    ///
+    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after on the main thread
+    /// for your changes to take visual effect.
+    pub fn push_item(&self, item: PreviewItem) {
+        let mut state = self.state.lock().unwrap();
+
+        state.items.push(item);
+        state.dirty = true;
+    }
+
     /// Assigns a new set of preview items to the Preview Panel.
     ///
     /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after on the main thread
     /// for your changes to take visual effect.
-    pub fn set_items(&mut self, items: Vec<PreviewItem>) {
+    pub fn set_items(&self, items: Vec<PreviewItem>) {
         let mut state = self.state.lock().unwrap();
 
         state.items = items;
@@ -147,6 +172,7 @@ impl PreviewItem {
 /// - [convertRectToScreen](https://docs.rs/objc2-app-kit/latest/objc2_app_kit/struct.NSWindow.html#method.convertRectToScreen) ([Apple Docs](https://developer.apple.com/documentation/appkit/nswindow/converttoscreen(_:))) If you're already using AppKit APIs.
 #[derive(Clone, PartialEq)]
 pub struct SourceFrame {
+    /// The frame's x position, relative to the left of the screen.
     pub x: f64,
     /// The frame's y position, relative to the bottom of the screen.
     pub y: f64,
