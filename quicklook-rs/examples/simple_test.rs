@@ -13,6 +13,7 @@ fn main() {
     panel.set_items(vec![
         PreviewItem::from_file_url("<path-to-your-file-1>", None).unwrap(),
         PreviewItem::from_file_url("<path-to-your-file-2>", None).unwrap(),
+        PreviewItem::from_url_string("https://google.com", None).unwrap(),
     ]);
 
     panel.show();
