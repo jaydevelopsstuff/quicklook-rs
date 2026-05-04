@@ -156,6 +156,7 @@ impl QuickLookHandle {
     }
 }
 
+/// Stores the preview panel state.
 #[derive(Default)]
 pub struct PanelState {
     items: Vec<PreviewItem>,
@@ -166,6 +167,7 @@ pub struct PanelState {
 ///
 /// If no `src_frame` is specified, the preview pane will use a
 /// fade in/out animation rather than a zoom in/out animation.
+#[derive(Clone)]
 pub struct PreviewItem {
     source: Retained<NSURL>,
     src_frame: Option<SourceFrame>,
@@ -208,7 +210,7 @@ impl PreviewItem {
 ///
 /// # See Also
 /// - [convertRectToScreen](https://docs.rs/objc2-app-kit/latest/objc2_app_kit/struct.NSWindow.html#method.convertRectToScreen) ([Apple Docs](https://developer.apple.com/documentation/appkit/nswindow/converttoscreen(_:))) If you're already using AppKit APIs.
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SourceFrame {
     /// The frame's x position, relative to the left of the screen.
     pub x: f64,
