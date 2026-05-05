@@ -169,6 +169,32 @@ impl QuickLookPanel {
         self.panel.orderOut(None);
     }
 
+    /// Returns a clone of the preview item currently being
+    /// viewed in the preview pane.
+    ///
+    /// May return [`None`] if items haven't been added to the pane yet,
+    /// or if the preview pane have somehow lost sync (unlikely).
+    pub fn current_preview_item(&self) -> Option<PreviewItem> {
+        self.state
+            .lock()
+            .unwrap()
+            .items
+            .get(self.current_preview_item_index() as usize)
+            .cloned()
+    }
+
+    /// The index of the preview item currently being viewed
+    pub fn current_preview_item_index(&self) -> isize {
+        unsafe { self.panel.currentPreviewItemIndex() }
+    }
+
+    /// Setter for the current preview item index
+    pub fn set_current_preview_item_index(&self, index: isize) {
+        unsafe {
+            self.panel.setCurrentPreviewItemIndex(index);
+        }
+    }
+
     pub fn handle(&self) -> QuickLookHandle {
         QuickLookHandle {
             state: self.state.clone(),
