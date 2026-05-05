@@ -228,7 +228,7 @@ impl QuickLookHandle {
 
 /// Stores the preview panel state.
 #[derive(Default)]
-pub struct PanelState {
+struct PanelState {
     items: Vec<PreviewItem>,
     dirty: bool,
 }
