@@ -5,7 +5,7 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "An easy to use Rust wrapper for Apple's QuickLookUI API."
-keywords = ["macos", "appkit", "quicklook-ui", "quicklook"]
+keywords = ["macos", "appkit", "quicklook-ui", "apple"]
 categories = ["os::macos-apis", "api-bindings"]
 readme = "../README.md"
 
