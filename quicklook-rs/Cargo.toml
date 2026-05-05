@@ -1,7 +1,12 @@
 [package]
 name = "quicklook-rs"
 version = "0.1.0"
-edition = "2024"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "An easy to use Rust wrapper for Apple's QuickLookUI API."
+keywords = ["macos", "appkit", "quicklook-ui", "quicklook"]
+categories = ["os::macos-apis"]
 
 [dependencies]
 objc2 = "0.6.4"
