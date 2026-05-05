@@ -2,7 +2,7 @@
 #![expect(rustdoc::missing_crate_level_docs)] // it's an example
 
 use eframe::egui;
-use quicklook_rs::{PreviewItem, QuickLookPanel, SourceFrame};
+use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 fn main() -> eframe::Result {
     let options = eframe::NativeOptions {

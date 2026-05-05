@@ -1,10 +1,10 @@
-# quicklook-rs
+# quicklook
 
-`quicklook-rs` provides an easy to use Rust wrapper for Apple's 
+`quicklook` provides an easy to use Rust wrapper for Apple's 
 [QuickLookUI API](https://developer.apple.com/documentation/quicklookui).
 
 Unlike the [`objc2-quick-look-ui`](https://crates.io/crates/objc2-quick-look-ui) crate,
-`quicklook-rs` doesn't just provide bindings, but rather makes QuickLookUI accessible in
+`quicklook` doesn't just provide bindings, but rather makes QuickLookUI accessible in
 idiomatic Rust. This removes the need for manually writing the required delegates and other
 interop between Rust and Apple's Objective-C APIs.
 
@@ -17,7 +17,7 @@ In reality most of these methods would likely be called in response to user inpu
 in different part of the application cycle, but this gives a good picture of the API.
 
 ```rust
-use quicklook_rs::{PreviewItem, QuickLookPanel, SourceFrame};
+use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 // ...
 // On the main thread and after a running application has been established
@@ -56,11 +56,16 @@ panel.hide();
 
 ### Simple
 For a simple example and testing purposes, you can try out `examples/simple_test` 
-(found within the `quicklook-rs` library folder). Simply modify the file urls in the 
+(found within the `quicklook` library folder). Simply modify the file urls in the 
 `set_items` call to your liking and then execute `cargo run --example simple_test`
-(ensure you're executing this within the `quicklook-rs` library folder).
+(ensure you're executing this within the `quicklook` library folder).
 
 ### Full Demo
-For more robust demonstration and testing of `quicklook-rs`, you can try out
+For more robust demonstration and testing of `quicklook`, you can try out
 `examples/egui_demo` (found within the repository's root). For more info check out
 the [README](examples/egui_demo/README.md).
+
+## Scope
+For now, this is just a wrapper for Apple's QuickLookUI API, but I'm open to
+implementing similar features for different platforms if they prove relevant.
+Open a feature request issue if you're interested.

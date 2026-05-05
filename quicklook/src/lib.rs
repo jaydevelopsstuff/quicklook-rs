@@ -6,7 +6,7 @@ in Rust without the tedious interop.
 In reality most of these methods would likely be called in response to user inputs
 in different part of the application cycle, but this gives a good picture of the API.
 ```rust
-use quicklook_rs::{PreviewItem, QuickLookPanel, SourceFrame};
+use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 // ...
 // On the main thread and after a running application has been established

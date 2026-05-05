@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "quicklook-rs",
+    "quicklook",
     "examples/egui_demo"
 ]
 resolver = "3"

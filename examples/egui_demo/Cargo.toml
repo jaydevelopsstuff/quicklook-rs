@@ -8,7 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-quicklook-rs = { path = "../../quicklook-rs" }
+quicklook = { path = "../../quicklook" }
 
 egui = "0.34"
 eframe = "0.34"

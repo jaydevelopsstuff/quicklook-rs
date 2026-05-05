@@ -1,6 +1,6 @@
 use objc2::MainThreadMarker;
 use objc2_app_kit::NSApplication;
-use quicklook_rs::{PreviewItem, QuickLookPanel, SourceFrame};
+use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 fn main() {
     let mtm = MainThreadMarker::new().unwrap();
