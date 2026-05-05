@@ -63,7 +63,7 @@ For a simple example and testing purposes, you can try out `examples/simple_test
 ### Full Demo
 For more robust demonstration and testing of `quicklook`, you can try out
 `examples/egui_demo` (found within the repository's root). For more info check out
-the [README](examples/egui_demo/README.md).
+its [README](examples/egui_demo/README.md).
 
 ## Scope
 For now, this is just a wrapper for Apple's QuickLookUI API, but I'm open to
