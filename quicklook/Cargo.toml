@@ -1,6 +1,6 @@
 [package]
 name = "quicklook"
-version = "0.1.0"
+version = "0.1.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,6 +8,12 @@ description = "An easy to use Rust wrapper for Apple's QuickLookUI API."
 keywords = ["macos", "appkit", "quicklook-ui", "apple"]
 categories = ["os::macos-apis", "api-bindings"]
 readme = "../README.md"
+
+[package.metadata.docs.rs]
+# Build for macOS so the objc2 dependencies can find the right symbols
+default-target = "x86_64-apple-darwin"
+# Pass the 'docsrs' flag so we can use it for conditional logic
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 objc2 = "0.6.4"
