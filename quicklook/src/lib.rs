@@ -161,10 +161,13 @@ impl QuickLookPanel {
         }
     }
 
+    /// Moves the preview pane to the front of the screen list and focuses
+    /// it.
     pub fn show(&self) {
         self.panel.makeKeyAndOrderFront(None);
     }
 
+    /// Removes the window from the screen list, hiding it.
     pub fn hide(&self) {
         self.panel.orderOut(None);
     }
@@ -269,6 +272,19 @@ impl PreviewItem {
             NSURL::URLWithString(&NSString::from_str(url_string.as_ref()))?,
             src_frame,
         ))
+    }
+
+    /// Attempts to get the absolute url string from the stored NSURL this PreviewItem
+    /// holds.
+    pub fn absolute_url_string(&self) -> Option<String> {
+        self.source
+            .absoluteString()
+            .and_then(|s| Some(s.to_string()))
+    }
+
+    /// Returns a reference to this item's source frame, if it has one.
+    pub fn source_frame(&self) -> Option<&SourceFrame> {
+        self.src_frame.as_ref()
     }
 }
 
