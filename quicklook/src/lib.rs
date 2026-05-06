@@ -280,12 +280,15 @@ impl PreviewItem {
 ///
 /// # See Also
 /// - [convertRectToScreen](https://docs.rs/objc2-app-kit/latest/objc2_app_kit/struct.NSWindow.html#method.convertRectToScreen) ([Apple Docs](https://developer.apple.com/documentation/appkit/nswindow/converttoscreen(_:))) If you're already using AppKit APIs.
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
 pub struct SourceFrame {
     /// The frame's x position, relative to the left of the screen.
     pub x: f64,
     /// The frame's y position, relative to the bottom of the screen.
     pub y: f64,
+    /// The frame's width
     pub width: f64,
+    /// The frame's height
     pub height: f64,
 }
