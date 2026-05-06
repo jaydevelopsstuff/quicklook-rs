@@ -130,7 +130,7 @@ impl QuickLookPanel {
     ///
     /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] for your changes
     /// to take visual effect.
-    pub fn set_items(&mut self, items: Vec<PreviewItem>) {
+    pub fn set_items(&self, items: Vec<PreviewItem>) {
         let mut state = self.state.lock().unwrap();
 
         state.items = items;
