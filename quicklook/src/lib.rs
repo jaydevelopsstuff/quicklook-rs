@@ -89,7 +89,7 @@ impl QuickLookPanel {
     /// for each application that is running.
     ///
     /// This will return [`None`] if called from a thread other than the main
-    /// thread, or if the sharedPreviewPanel instance failed to be
+    /// thread, or if the `sharedPreviewPanel` instance failed to be
     /// retrieved/created.
     pub fn shared() -> Option<Self> {
         let mtm = MainThreadMarker::new()?;
@@ -161,6 +161,16 @@ impl QuickLookPanel {
         }
     }
 
+    /// This method shows the pane if it is currently hidden, and vice versa
+    /// if its already shown.
+    pub fn toggle_visible(&self) {
+        if self.is_visible() {
+            self.hide();
+        } else {
+            self.show();
+        }
+    }
+
     /// Moves the preview pane to the front of the screen list and focuses
     /// it.
     pub fn show(&self) {
@@ -172,11 +182,16 @@ impl QuickLookPanel {
         self.panel.orderOut(None);
     }
 
+    /// Whether the preview pane is currently visible on the screen.
+    pub fn is_visible(&self) -> bool {
+        self.panel.isVisible()
+    }
+
     /// Returns a clone of the preview item currently being
     /// viewed in the preview pane.
     ///
     /// May return [`None`] if items haven't been added to the pane yet,
-    /// or if the preview pane have somehow lost sync (unlikely).
+    /// or if the preview pane and the data source have somehow lost sync (unlikely).
     pub fn current_preview_item(&self) -> Option<PreviewItem> {
         self.state
             .lock()
@@ -230,7 +245,7 @@ impl QuickLookHandle {
 }
 
 /// Stores the preview panel state.
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct PanelState {
     items: Vec<PreviewItem>,
     dirty: bool,
@@ -240,7 +255,7 @@ struct PanelState {
 ///
 /// If no `src_frame` is specified, the preview pane will use a
 /// fade in/out animation rather than a zoom in/out animation.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PreviewItem {
     source: Retained<NSURL>,
     src_frame: Option<SourceFrame>,

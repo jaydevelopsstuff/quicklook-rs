@@ -98,7 +98,9 @@ impl eframe::App for MyApp {
                     self.dirty = true;
                 }
                 if ui.button("Show Preview Pane").clicked() {
+                    println!("Trying to show preview pane");
                     self.ql_panel.show();
+                    println!("Did show preview pane");
                 }
             })
         });
