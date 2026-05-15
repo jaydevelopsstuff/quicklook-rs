@@ -2,11 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use objc2::rc::Retained;
 use objc2::{AnyThread, DeclaredClass, define_class, msg_send};
-use objc2_app_kit::NSPanel;
-use objc2_foundation::NSURL;
+use objc2_foundation::{NSInteger, NSURL};
 use objc2_foundation::{NSObject, NSObjectProtocol};
 
-use objc2_quick_look_ui::QLPreviewPanelDataSource as QLPreviewPanelDataSourceProtocol;
+use objc2_quick_look_ui::{
+    QLPreviewPanel, QLPreviewPanelDataSource as QLPreviewPanelDataSourceProtocol,
+};
 
 use crate::PanelState;
 
@@ -22,15 +23,24 @@ define_class!(
 
     unsafe impl QLPreviewPanelDataSourceProtocol for QLPreviewPanelDataSource {
         #[unsafe(method(numberOfPreviewItemsInPreviewPanel:))]
-        fn instance_number_of_preview_items_in_preview_panel(&self, _panel: &NSPanel) -> usize {
-            self.ivars().state.lock().unwrap().items.len()
+        fn instance_number_of_preview_items_in_preview_panel(
+            &self,
+            _panel: Option<&QLPreviewPanel>,
+        ) -> NSInteger {
+            self.ivars().state.lock().unwrap().items.len() as isize
         }
 
         #[unsafe(method_id(previewPanel:previewItemAtIndex:))]
-        fn preview_item_at_index(&self, _panel: &NSPanel, index: usize) -> Retained<NSURL> {
-            self.ivars().state.lock().unwrap().items[index]
-                .source
-                .clone()
+        fn preview_item_at_index(
+            &self,
+            _panel: Option<&QLPreviewPanel>,
+            index: usize,
+        ) -> Option<Retained<NSURL>> {
+            Some(
+                self.ivars().state.lock().unwrap().items[index]
+                    .source
+                    .clone(),
+            )
         }
     }
 
