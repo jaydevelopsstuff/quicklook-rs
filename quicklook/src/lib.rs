@@ -213,6 +213,10 @@ impl QuickLookPanel {
         }
     }
 
+    /// Acquire a thread safe handle for updating preview pane data.
+    ///
+    /// Any main-thread only methods like refreshing, showing, hiding, etc.
+    /// which hook into the AppKit APIs are not available through the handle.
     pub fn handle(&self) -> QuickLookHandle {
         QuickLookHandle {
             state: self.state.clone(),
