@@ -29,21 +29,17 @@ panel.set_items(vec![
     // Without a source frame (preview pane will have a fade in/out animation)
     PreviewItem::from_file_url("/test/example-text.txt", None).unwrap(),
     // With a source frame (preview pane will have zoom in/out animation based on the frame)
-    PreviewItem::from_file_url("/test/example-img.jpeg", Some(SourceFrame {
-        // Dummy values
-        x: 64.,
-        y: 64.,
-        width: 64.,
-        height: 64.,
-    })).unwrap(),
+    PreviewItem::from_file_url("/test/example-img.jpeg", Some(SourceFrame::screen(64., 64., 64., 64.))).unwrap(),
     PreviewItem::from_url_string("https://google.com", None).unwrap(),
 ]);
 
 // Displaying the panel
 panel.show();
 
-// Adding items on the fly (you could also use set_items)
-panel.push_item(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+// Adding items on the fly / manually mutating the list of items
+panel.with_items_mut(|items| {
+    items.push(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+});
 
 // Reloading to trigger changes taking effect if the panel is already open
 panel.reload_if_dirty();
