@@ -2,13 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use objc2::rc::Retained;
 use objc2::{AnyThread, DeclaredClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
-use objc2_app_kit::{NSEvent, NSImage, NSPanel, NSWindowDelegate};
+use objc2_app_kit::{NSApplication, NSEvent, NSImage, NSPanel, NSWindowDelegate};
 use objc2_foundation::{NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize};
 use objc2_foundation::{NSURL, NSZeroRect};
 
-use objc2_quick_look_ui::QLPreviewPanelDelegate as QLPreviewPanelDelegateProtocol;
+use objc2_quick_look_ui::{
+    QLPreviewPanel, QLPreviewPanelDelegate as QLPreviewPanelDelegateProtocol,
+};
 
-use crate::PanelState;
+use crate::{PanelState, SourceFrame};
 
 #[derive(Clone)]
 pub struct Ivars {
@@ -30,10 +32,10 @@ define_class!(
         #[unsafe(method(previewPanel:sourceFrameOnScreenForPreviewItem:))]
         fn source_frame_on_screen_for_preview_item(
             &self,
-            _panel: Option<&NSPanel>,
+            panel: Option<&QLPreviewPanel>,
             item: Option<&NSURL>,
         ) -> NSRect {
-            if let Some(item) = item {
+            if let (Some(item), Some(_panel)) = (item, panel) {
                 let state = self.ivars().state.lock().unwrap();
 
                 let matching_item = state
@@ -41,13 +43,26 @@ define_class!(
                     .iter()
                     .find(|src_item| *src_item.source == *item);
 
-                if let Some(src_frame) = matching_item.and_then(|i| i.src_frame.as_ref()) {
-                    NSRect::new(
-                        NSPoint::new(src_frame.x, src_frame.y),
-                        NSSize::new(src_frame.width, src_frame.height),
-                    )
-                } else {
-                    unsafe { NSZeroRect }
+                match matching_item.and_then(|i| i.src_frame.as_ref()) {
+                    Some(SourceFrame::Screen(frame)) => NSRect::new(
+                        NSPoint::new(frame.x, frame.y),
+                        NSSize::new(frame.width, frame.height),
+                    ),
+                    Some(SourceFrame::Window(window_number, frame)) => {
+                        if let Some(window) = NSApplication::sharedApplication(unsafe {
+                            MainThreadMarker::new_unchecked()
+                        })
+                        .windowWithWindowNumber(*window_number)
+                        {
+                            window.convertRectToScreen(NSRect::new(
+                                NSPoint::new(frame.x, frame.y),
+                                NSSize::new(frame.width, frame.height),
+                            ))
+                        } else {
+                            unsafe { NSZeroRect }
+                        }
+                    }
+                    None => unsafe { NSZeroRect },
                 }
             } else {
                 unsafe { NSZeroRect }
@@ -57,7 +72,7 @@ define_class!(
         #[unsafe(method_id(previewPanel:transitionImageForPreviewItem:contentRect:))]
         fn transition_image_for_preview_item(
             &self,
-            _panel: Option<&NSPanel>,
+            _panel: Option<&QLPreviewPanel>,
             item: Option<&NSURL>,
             content_rect: *mut NSRect,
         ) -> Option<Retained<NSImage>> {

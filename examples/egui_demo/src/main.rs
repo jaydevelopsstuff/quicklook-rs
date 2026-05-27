@@ -2,6 +2,7 @@
 #![expect(rustdoc::missing_crate_level_docs)] // it's an example
 
 use eframe::egui;
+use egui::Response;
 use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 fn main() -> eframe::Result {
@@ -12,7 +13,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Native file dialogs and drag-and-drop files",
+        "quicklook-rs egui demo",
         options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -27,6 +28,8 @@ struct MyApp {
 
     picked_images: Vec<String>,
     dirty: bool,
+
+    prev_screen_height: f32,
 }
 
 impl MyApp {
@@ -35,13 +38,50 @@ impl MyApp {
             ql_panel: QuickLookPanel::shared().unwrap(),
             picked_images: vec![],
             dirty: false,
+            prev_screen_height: 0.,
         }
+    }
+
+    fn sync_preview_items(
+        &self,
+        window_height: f32,
+        frame: &eframe::Frame,
+        img_responses: &Vec<Response>,
+    ) {
+        self.ql_panel.set_items(
+            self.picked_images
+                .iter()
+                .enumerate()
+                .map(|(i, path)| {
+                    PreviewItem::from_file_url(
+                        path,
+                        Some(
+                            SourceFrame::window(
+                                frame,
+                                img_responses[i].rect.left() as f64,
+                                // Convert y coordinate from relative to top of window to relative to bottom of window
+                                (window_height
+                                    - (img_responses[i].rect.top()
+                                        + img_responses[i].rect.height()))
+                                    as f64,
+                                img_responses[i].rect.width() as f64,
+                                img_responses[i].rect.height() as f64,
+                            )
+                            .unwrap(),
+                        ),
+                    )
+                    .unwrap()
+                })
+                .collect(),
+        );
     }
 }
 
 impl eframe::App for MyApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
+            let current_screen_height = ui.ctx().content_rect().height();
+
             let mut responses = vec![];
             ui.horizontal_wrapped(|ui| {
                 for path in &self.picked_images {
@@ -56,31 +96,7 @@ impl eframe::App for MyApp {
             });
 
             if self.dirty {
-                let monitor_frame = ui.input(|i| i.viewport().monitor_size.unwrap());
-                let window_frame = ui.input(|i| i.viewport().inner_rect.unwrap());
-
-                self.ql_panel.set_items(
-                    self.picked_images
-                        .iter()
-                        .enumerate()
-                        .map(|(i, path)| {
-                            PreviewItem::from_file_url(
-                                path,
-                                Some(SourceFrame {
-                                    x: (window_frame.left() + responses[i].rect.left()) as f64,
-                                    y: (monitor_frame.y
-                                        - (window_frame.top()
-                                            + responses[i].rect.top()
-                                            + responses[i].rect.height()))
-                                        as f64,
-                                    width: responses[i].rect.width() as f64,
-                                    height: responses[i].rect.height() as f64,
-                                }),
-                            )
-                            .unwrap()
-                        })
-                        .collect(),
-                );
+                self.sync_preview_items(current_screen_height, frame, &responses);
                 self.ql_panel.reload_if_dirty();
                 self.dirty = false;
             }
@@ -98,11 +114,15 @@ impl eframe::App for MyApp {
                     self.dirty = true;
                 }
                 if ui.button("Show Preview Pane").clicked() {
-                    println!("Trying to show preview pane");
                     self.ql_panel.show();
-                    println!("Did show preview pane");
                 }
-            })
+            });
+
+            if current_screen_height != self.prev_screen_height {
+                // Resize detected, recalculate and update preview item source frames
+                self.sync_preview_items(current_screen_height, frame, &responses);
+            }
+            self.prev_screen_height = current_screen_height;
         });
     }
 }

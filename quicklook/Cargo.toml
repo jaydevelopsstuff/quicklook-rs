@@ -18,9 +18,10 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", features = ["NSEvent", "NSImage", "NSPanel"], default-features = false }
+objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSEvent", "NSImage", "NSPanel"], default-features = false }
 objc2-foundation = { version = "0.3.2", features = ["NSURL", "NSArray", "NSGeometry"], default-features = false }
 objc2-quick-look-ui = "0.3.2"
+raw-window-handle = "0.6.2"
 
 serde = { version = "1.0", features = ["derive"], optional = true }
 

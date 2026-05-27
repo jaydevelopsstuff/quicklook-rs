@@ -27,7 +27,7 @@ define_class!(
             &self,
             _panel: Option<&QLPreviewPanel>,
         ) -> NSInteger {
-            self.ivars().state.lock().unwrap().items.len() as isize
+            self.ivars().state.lock().unwrap().items.len() as NSInteger
         }
 
         #[unsafe(method_id(previewPanel:previewItemAtIndex:))]

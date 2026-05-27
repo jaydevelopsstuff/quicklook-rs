@@ -5,7 +5,7 @@ in Rust without the tedious interop.
 ## Basic Usage
 In reality most of these methods would likely be called in response to user inputs
 in different part of the application cycle, but this gives a good picture of the API.
-```rust
+```rust,no_run
 use quicklook::{PreviewItem, QuickLookPanel, SourceFrame};
 
 // ...
@@ -18,21 +18,17 @@ panel.set_items(vec![
     // Without a source frame (preview pane will have a fade in/out animation)
     PreviewItem::from_file_url("/test/example-text.txt", None).unwrap(),
     // With a source frame (preview pane will have zoom in/out animation based on the frame)
-    PreviewItem::from_file_url("/test/example-img.jpeg", Some(SourceFrame {
-        // Dummy values
-        x: 64.,
-        y: 64.,
-        width: 64.,
-        height: 64.,
-    })).unwrap(),
+    PreviewItem::from_file_url("/test/example-img.jpeg", Some(SourceFrame::screen(64., 64., 64., 64.))).unwrap(),
     PreviewItem::from_url_string("https://google.com", None).unwrap(),
 ]);
 
 // Displaying the panel
 panel.show();
 
-// Adding items on the fly (you could also use set_items)
-panel.push_item(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+// Adding items on the fly / manually mutating the list of items
+panel.with_items_mut(|items| {
+    items.push(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+});
 
 // Reloading to trigger changes taking effect if the panel is already open
 panel.reload_if_dirty();
@@ -45,7 +41,9 @@ panel.hide();
 use std::sync::{Arc, Mutex};
 
 use objc2::{MainThreadMarker, rc::Retained, runtime::ProtocolObject};
+use objc2_app_kit::NSView;
 use objc2_quick_look_ui::QLPreviewPanel;
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 
 use crate::interop::{
     qlpreviewpaneldatasource::QLPreviewPanelDataSource,
@@ -54,22 +52,22 @@ use crate::interop::{
 
 use std::path::Path;
 
-use objc2_foundation::{NSString, NSURL};
+use objc2_foundation::{NSInteger, NSString, NSURL};
 
 mod interop;
 
-/// The main representation for the QuickLook Preview Panel.
-/// Only one instance per application should be created and used
-/// on the **main thread only**.
+/// The main representation and manager for the QuickLook Preview Panel.
+/// Only one instance per application can be created and used on the
+/// **main thread only**.
 ///
 /// # See Also
-/// - [`QuickLookPanel::handle`] for accessing/modifying pane
-/// state from other threads
+/// - [`QuickLookPanel::handle`] for accessing/modifying pane state from
+/// other threads
 pub struct QuickLookPanel {
     panel: Retained<QLPreviewPanel>,
     state: Arc<Mutex<PanelState>>,
-    data_source: Retained<QLPreviewPanelDataSource>,
-    delegate: Retained<QLPreviewPanelDelegate>,
+    _data_source: Retained<QLPreviewPanelDataSource>,
+    _delegate: Retained<QLPreviewPanelDelegate>,
 }
 
 /// A thread safe handle for sharing/modifying the quicklook preview panel state
@@ -109,32 +107,40 @@ impl QuickLookPanel {
 
         Some(Self {
             panel,
-            data_source,
-            delegate,
+            _data_source: data_source,
+            _delegate: delegate,
             state: panel_state,
         })
     }
 
-    /// Appends a new preview item after the last one.
-    ///
-    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after for your changes
-    /// to take visual effect.
-    pub fn push_item(&self, item: PreviewItem) {
-        let mut state = self.state.lock().unwrap();
-
-        state.items.push(item);
-        state.dirty = true;
-    }
-
     /// Assigns a new set of preview items to the Preview Panel.
     ///
-    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] for your changes
-    /// to take visual effect.
+    /// **IMPORTANT**: If you change the URLs or order of the items you MUST
+    /// call [`QuickLookPanel::reload_if_dirty`] after for your changes to take
+    /// visual effect. However, if you are only updating the source frames of
+    /// pre-existing items you can safely avoid reloading.
     pub fn set_items(&self, items: Vec<PreviewItem>) {
         let mut state = self.state.lock().unwrap();
 
         state.items = items;
         state.dirty = true;
+    }
+
+    /// Provides mutable access to the current list of preview items through a closure.
+    ///
+    /// **IMPORTANT**: If you change the URLs or order of the items you MUST
+    /// call [`QuickLookPanel::reload_if_dirty`] after for your changes to take
+    /// visual effect. However, if you are only updating the source frames of
+    /// pre-existing items you can safely avoid reloading.
+    pub fn with_items_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Vec<PreviewItem>) -> R,
+    {
+        let mut state = self.state.lock().unwrap();
+
+        let res = f(&mut state.items);
+        state.dirty = true;
+        res
     }
 
     /// Requests that the preview panel reload its data
@@ -191,23 +197,29 @@ impl QuickLookPanel {
     /// viewed in the preview pane.
     ///
     /// May return [`None`] if items haven't been added to the pane yet,
-    /// or if the preview pane and the data source have somehow lost sync (unlikely).
+    /// or if the preview pane and the data source have somehow lost sync
+    /// (very unlikely).
     pub fn current_preview_item(&self) -> Option<PreviewItem> {
-        self.state
-            .lock()
-            .unwrap()
-            .items
-            .get(self.current_preview_item_index() as usize)
-            .cloned()
+        let index = self.current_preview_item_index();
+        if index < 0 {
+            None
+        } else {
+            self.state
+                .lock()
+                .unwrap()
+                .items
+                .get(index as usize)
+                .cloned()
+        }
     }
 
     /// The index of the preview item currently being viewed
-    pub fn current_preview_item_index(&self) -> isize {
+    pub fn current_preview_item_index(&self) -> NSInteger {
         unsafe { self.panel.currentPreviewItemIndex() }
     }
 
     /// Setter for the current preview item index
-    pub fn set_current_preview_item_index(&self, index: isize) {
+    pub fn set_current_preview_item_index(&self, index: NSInteger) {
         unsafe {
             self.panel.setCurrentPreviewItemIndex(index);
         }
@@ -225,26 +237,34 @@ impl QuickLookPanel {
 }
 
 impl QuickLookHandle {
-    /// Appends a new preview item after the last one.
-    ///
-    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after on the main thread
-    /// for your changes to take visual effect.
-    pub fn push_item(&self, item: PreviewItem) {
-        let mut state = self.state.lock().unwrap();
-
-        state.items.push(item);
-        state.dirty = true;
-    }
-
     /// Assigns a new set of preview items to the Preview Panel.
     ///
-    /// **IMPORTANT**: You must call [`QuickLookPanel::reload_if_dirty`] after on the main thread
-    /// for your changes to take visual effect.
+    /// **IMPORTANT**: If you change the URLs or order of the items you MUST
+    /// call [`QuickLookPanel::reload_if_dirty`] after on the main thread for your
+    /// changes to take visual effect. However, if you are only updating the source
+    /// frames of pre-existing items you can safely avoid reloading.
     pub fn set_items(&self, items: Vec<PreviewItem>) {
         let mut state = self.state.lock().unwrap();
 
         state.items = items;
         state.dirty = true;
+    }
+
+    /// Provides mutable access to the current list of preview items through a closure.
+    ///
+    /// **IMPORTANT**: If you change the URLs or order of the items you MUST
+    /// call [`QuickLookPanel::reload_if_dirty`] after on the main thread for your
+    /// changes to take visual effect. However, if you are only updating the source
+    /// frames of pre-existing items you can safely avoid reloading.
+    pub fn with_items_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Vec<PreviewItem>) -> R,
+    {
+        let mut state = self.state.lock().unwrap();
+
+        let res = f(&mut state.items);
+        state.dirty = true;
+        res
     }
 }
 
@@ -258,7 +278,8 @@ struct PanelState {
 /// An item that can be shown in the preview pane.
 ///
 /// If no `src_frame` is specified, the preview pane will use a
-/// fade in/out animation rather than a zoom in/out animation.
+/// fade in/out animation rather than a zoom in/out animation when
+/// it is opened and closed.
 #[derive(Clone, Debug)]
 pub struct PreviewItem {
     source: Retained<NSURL>,
@@ -266,6 +287,12 @@ pub struct PreviewItem {
 }
 
 impl PreviewItem {
+    /// Raw constructor for a preview item. Primarily for use cases where you need
+    /// full control over the creation of [`objc2_foundation::NSURL`].
+    ///
+    /// ## See also
+    /// - [`PreviewItem::from_file_url`] and [`PreviewItem::from_url_string`] are preferable
+    /// for most use cases
     pub fn new(source: Retained<NSURL>, src_frame: Option<SourceFrame>) -> Self {
         Self { source, src_frame }
     }
@@ -296,9 +323,7 @@ impl PreviewItem {
     /// Attempts to get the absolute url string from the stored NSURL this PreviewItem
     /// holds.
     pub fn absolute_url_string(&self) -> Option<String> {
-        self.source
-            .absoluteString()
-            .and_then(|s| Some(s.to_string()))
+        self.source.absoluteString().map(|s| s.to_string())
     }
 
     /// Returns a reference to this item's source frame, if it has one.
@@ -307,20 +332,126 @@ impl PreviewItem {
     }
 }
 
-/// Describes a frame on the screen where a preview item originates from.
+/// Describes a source frame where a preview item originates from.
+///
+/// This is used when the preview pane is opened or close, where if a source frame is specified for the currently
+/// viewed item the pane will animate the pane through scaling it in or out to make it appear as if the preview pane
+/// is spawning from or "coming out of" the source frame.
+#[derive(Debug, PartialEq, Clone)]
+pub enum SourceFrame {
+    /// A source frame with coordinates relative to the screen/monitor. This is intended for
+    /// users with unusual use-cases or that prefer more fine-grained control over coordinates.
+    ///
+    /// ## Notes
+    /// If your coordinates are for a frame within a window, you will need to manually recalculate and update
+    /// the source frame coordinates everytime that screen is moved. For this reason most of the
+    /// time you should probably should use [`SourceFrame::Window`] instead, which handles that for you.
+    Screen(SourceFrameRect),
+    /// A source frame with coordinates relative to a specified window. This is preferred over [`SourceFrame::Screen`]
+    /// in most use cases.
+    ///
+    /// Behind the scenes this makes use of `NSWindow`'s
+    /// [convertRectToScreen](https://developer.apple.com/documentation/appkit/nswindow/converttoscreen(_:)) method.
+    ///
+    /// ## Notes
+    /// It is important to note that while this type of source frame guarantees the source frame coordinates will
+    /// remain valid when the window is moved, it does NOT guarantee the source frame coordinates will remain valid
+    /// if the window is resized, or in other cases like when a user scrolls within the window. See
+    /// [`SourceFrameRect`]'s documentation for more details to help ensure source frame coordinates remain
+    /// valid.
+    Window(NSInteger, SourceFrameRect),
+}
+
+impl SourceFrame {
+    /// Creates a [`SourceFrame::Screen`] based on the input coordinates and dimensions. `x` and `y`
+    /// coordinates are relative to the bottom left corner of the screen.
+    ///
+    /// ## See Also
+    /// - [`SourceFrame::Screen`] for more details
+    pub fn screen(x: f64, y: f64, width: f64, height: f64) -> Self {
+        Self::Screen(SourceFrameRect {
+            x,
+            y,
+            width,
+            height,
+        })
+    }
+
+    /// Attempts to create a [`SourceFrame::Window`] based on the input coordinates, dimensions and provided window.
+    /// `x` and `y` coordinates are relative to the bottom left corner of the window.
+    ///
+    /// This will return [`None`] if the underlying window handle cannot be accessed, is not a [`RawWindowHandle::AppKit`]
+    /// handle, or if the `NSView` provided by the raw window handle does not return a parent window.
+    /// The 2nd case will only happen if you're trying to use this crate on the wrong platform and the other cases
+    /// are unlikely to occur with correct use.
+    ///
+    /// # See Also
+    /// - [`SourceFrame::Window`] for more details
+    pub fn window<W: HasWindowHandle>(
+        window: &W,
+        x: f64,
+        y: f64,
+        width: f64,
+        height: f64,
+    ) -> Option<Self> {
+        if let Ok(RawWindowHandle::AppKit(handle)) = window.window_handle().map(|h| h.as_raw()) {
+            let raw_view_ptr = handle.ns_view.as_ptr() as *mut NSView;
+
+            // SAFETY: The `raw_window_handle::HasWindowHandle` trait guarantees at execution time of this function
+            // that `raw_view_ptr` will be a valid pointer to `NSView`.
+            let view = unsafe { Retained::retain(raw_view_ptr)? };
+            let window = view.window()?;
+
+            Some(Self::Window(
+                window.windowNumber(),
+                SourceFrameRect {
+                    x,
+                    y,
+                    width,
+                    height,
+                },
+            ))
+        } else {
+            None
+        }
+    }
+
+    /// Returns a reference to the [`SourceFrameRect`] for this source frame
+    pub fn rect(&self) -> &SourceFrameRect {
+        match self {
+            Self::Screen(d) => d,
+            Self::Window(_w, d) => d,
+        }
+    }
+}
+
+/// Describes a frame with coordinates relative either to the entire screen or a window
+/// where the preview item originates from.
 ///
 /// In AppKit/Cocoa, coordinates are relative to the bottom-left corner
-/// of the screen, so you must take that into account when calculating
+/// of the window or screen, so you must take that into account when calculating
 /// your frame's `y` position.
 ///
-/// # See Also
-/// - [convertRectToScreen](https://docs.rs/objc2-app-kit/latest/objc2_app_kit/struct.NSWindow.html#method.convertRectToScreen) ([Apple Docs](https://developer.apple.com/documentation/appkit/nswindow/converttoscreen(_:))) If you're already using AppKit APIs.
+/// ## Notes
+/// An important consideration is how often you must update the position of your preview items,
+/// even if their content doesn't change. For example with a window relative frame, if a container of a preview item is
+/// scrollable, that preview item's previously set source frame position may become invalid when the user scrolls.
+/// Another example is when a window is resized and your `y` coordinate is relative to the top of
+/// the window—because AppKit coordinates are relative to the bottom of the window, your old `y`
+/// coordinate is now invalid. To avoid these issues you should ensure that you automatically recalculate
+/// your preview item(s) source frame positions and call [`QuickLookPanel::set_items`] or [`QuickLookPanel::with_items_mut`]
+/// (or the equivalent methods within [`QuickLookHandle`]) anytime a change occurs that might invalidate
+/// items' source frame `x`/`y` coordinates. The same principal goes for `width` and `height`, but those
+/// are less likely to become invalid in most use cases.
+///
+/// ## See Also
+/// - [`SourceFrame`] for more details on the differences between creating a frame relative to the screen vs window
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, PartialEq)]
-pub struct SourceFrame {
-    /// The frame's x position, relative to the left of the screen.
+pub struct SourceFrameRect {
+    /// The frame's x position, relative to the left of the window or screen
     pub x: f64,
-    /// The frame's y position, relative to the bottom of the screen.
+    /// The frame's y position, relative to the bottom of the window or screen
     pub y: f64,
     /// The frame's width
     pub width: f64,

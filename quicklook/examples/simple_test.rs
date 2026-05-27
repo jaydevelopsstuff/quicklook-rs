@@ -7,23 +7,22 @@ fn main() {
 
     let app = NSApplication::sharedApplication(mtm);
 
-    let mut panel = QuickLookPanel::shared().unwrap();
+    let panel = QuickLookPanel::shared().unwrap();
 
     // Add some test file paths that exist on your file system
     panel.set_items(vec![
         PreviewItem::from_file_url("<path-to-your-file-1>", None).unwrap(),
         PreviewItem::from_file_url(
             "<path-to-your-file-2>",
-            Some(SourceFrame {
-                x: 64.,
-                y: 64.,
-                width: 64.,
-                height: 64.,
-            }),
+            Some(SourceFrame::screen(64., 64., 64., 64.)),
         )
         .unwrap(),
         PreviewItem::from_url_string("https://google.com", None).unwrap(),
     ]);
+
+    panel.with_items_mut(|items| {
+        items.push(PreviewItem::from_file_url("/test/example-img2.jpeg", None).unwrap());
+    });
 
     panel.show();
 
