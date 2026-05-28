@@ -2,6 +2,10 @@
 
 `quicklook` provides an easy to use Rust wrapper for Apple's 
 [QuickLookUI API](https://developer.apple.com/documentation/quicklookui).
+The main use case for it is using and display a Quicklook preview pane (like in Finder)
+for certain items.
+
+https://github.com/user-attachments/assets/9e27a696-30fc-4f3b-af41-7a18a004ed3f
 
 Unlike the [`objc2-quick-look-ui`](https://crates.io/crates/objc2-quick-look-ui) crate,
 `quicklook` doesn't just provide bindings, but rather makes QuickLookUI accessible in
