@@ -120,7 +120,10 @@ impl QuickLookPanel {
     /// visual effect. However, if you are only updating the source frames of
     /// pre-existing items you can safely avoid reloading.
     pub fn set_items(&self, items: Vec<PreviewItem>) {
-        self.state.lock().unwrap().replace_items(items);
+        let mut state = self.state.lock().unwrap();
+
+        state.items = items;
+        state.dirty = true;
     }
 
     /// Provides mutable access to the current list of preview items through a closure.
@@ -135,20 +138,7 @@ impl QuickLookPanel {
     {
         let mut state = self.state.lock().unwrap();
 
-        let before: Vec<(Retained<NSURL>, bool)> = state
-            .items
-            .iter()
-            .map(|item| (item.source.clone(), item.src_frame.is_some()))
-            .collect();
         let res = f(&mut state.items);
-        let restored = state.items.iter().enumerate().any(|(index, item)| {
-            before.get(index).is_some_and(|(old_source, had_frame)| {
-                !had_frame && item.src_frame.is_some() && *item.source == **old_source
-            })
-        });
-        if restored {
-            state.frame_restored = true;
-        }
         state.dirty = true;
         res
     }
@@ -166,56 +156,7 @@ impl QuickLookPanel {
                 self.panel.reloadData();
             }
             state.dirty = false;
-            self.relatch_open_animation(&mut state);
         }
-    }
-
-    /// Reloads the panel if a restored source frame means its animation should
-    /// upgrade from fade to zoom. Must be called on the **main thread**.
-    ///
-    /// `QLPreviewPanel` commits to either the zoom or the fade animation when it
-    /// opens (or reloads): if the current item had no source frame at that moment
-    /// the panel will also *close* with a fade, even if the item gains a frame
-    /// later — only the *coordinates* of an already-committed zoom are re-queried
-    /// live at close time. Call this after item updates (gated by
-    /// [`QuickLookHandle::take_frame_restored`]) to catch that one case: the
-    /// panel is visible with a fade committed while the current item now has a
-    /// source frame. The panel is then reloaded so it re-evaluates and zooms.
-    pub fn upgrade_animation_for_restored_frames(&self) {
-        if !self.is_visible() {
-            return;
-        }
-
-        let mut state = self.state.lock().unwrap();
-        if state.opened_with_zoom {
-            return;
-        }
-        let index = self.current_preview_item_index().max(0) as usize;
-        if state
-            .items
-            .get(index)
-            .is_none_or(|item| item.src_frame.is_none())
-        {
-            return;
-        }
-
-        unsafe {
-            self.panel.reloadData();
-        }
-        state.dirty = false;
-        self.relatch_open_animation(&mut state);
-    }
-
-    /// Records whether the panel is opening/reloading with a zoom animation
-    /// (current item has a source frame) or a fade, mirroring the decision
-    /// AppKit makes from this same state.
-    fn relatch_open_animation(&self, state: &mut PanelState) {
-        let index = self.current_preview_item_index().max(0) as usize;
-        state.opened_with_zoom = state
-            .items
-            .get(index)
-            .is_some_and(|item| item.src_frame.is_some());
-        state.frame_restored = false;
     }
 
     /// Requests that the preview panel recompute the preview
@@ -239,12 +180,6 @@ impl QuickLookPanel {
     /// Moves the preview pane to the front of the screen list and focuses
     /// it.
     pub fn show(&self) {
-        if !self.is_visible() {
-            // Mirror the fade-vs-zoom decision AppKit is about to make so
-            // upgrade_animation_for_restored_frames can tell them apart later
-            let mut state = self.state.lock().unwrap();
-            self.relatch_open_animation(&mut state);
-        }
         self.panel.makeKeyAndOrderFront(None);
     }
 
@@ -309,7 +244,10 @@ impl QuickLookHandle {
     /// changes to take visual effect. However, if you are only updating the source
     /// frames of pre-existing items you can safely avoid reloading.
     pub fn set_items(&self, items: Vec<PreviewItem>) {
-        self.state.lock().unwrap().replace_items(items);
+        let mut state = self.state.lock().unwrap();
+
+        state.items = items;
+        state.dirty = true;
     }
 
     /// Provides mutable access to the current list of preview items through a closure.
@@ -324,32 +262,9 @@ impl QuickLookHandle {
     {
         let mut state = self.state.lock().unwrap();
 
-        let before: Vec<(Retained<NSURL>, bool)> = state
-            .items
-            .iter()
-            .map(|item| (item.source.clone(), item.src_frame.is_some()))
-            .collect();
         let res = f(&mut state.items);
-        let restored = state.items.iter().enumerate().any(|(index, item)| {
-            before.get(index).is_some_and(|(old_source, had_frame)| {
-                !had_frame && item.src_frame.is_some() && *item.source == **old_source
-            })
-        });
-        if restored {
-            state.frame_restored = true;
-        }
         state.dirty = true;
         res
-    }
-
-    /// Returns `true` (clearing the flag) if an item update since the last
-    /// show/reload/check gave a source frame back to an item that previously
-    /// had none — the one frame-only change that can require a panel reload.
-    /// When this returns `true`, call
-    /// [`QuickLookPanel::upgrade_animation_for_restored_frames`] on the main
-    /// thread.
-    pub fn take_frame_restored(&self) -> bool {
-        std::mem::take(&mut self.state.lock().unwrap().frame_restored)
     }
 }
 
@@ -358,32 +273,6 @@ impl QuickLookHandle {
 struct PanelState {
     items: Vec<PreviewItem>,
     dirty: bool,
-    /// Whether the panel's current item had a source frame the last time the
-    /// panel was shown or reloaded — i.e. whether AppKit committed to the zoom
-    /// animation rather than the fade for this session.
-    opened_with_zoom: bool,
-    /// Set when an item keeps its URL but goes from no source frame to having
-    /// one; consumed via [`QuickLookHandle::take_frame_restored`].
-    frame_restored: bool,
-}
-
-impl PanelState {
-    /// Replaces the item list, flagging any item that kept its URL (at the
-    /// same index) but regained a source frame it previously lacked.
-    fn replace_items(&mut self, items: Vec<PreviewItem>) {
-        let restored = items.iter().enumerate().any(|(index, new_item)| {
-            self.items.get(index).is_some_and(|old_item| {
-                old_item.src_frame.is_none()
-                    && new_item.src_frame.is_some()
-                    && *old_item.source == *new_item.source
-            })
-        });
-        if restored {
-            self.frame_restored = true;
-        }
-        self.items = items;
-        self.dirty = true;
-    }
 }
 
 /// An item that can be shown in the preview pane.
